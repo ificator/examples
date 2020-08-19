@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNet.OData;
 using Microsoft.AspNet.OData.Formatter.Serialization;
 using Microsoft.OData;
+using System.Collections.Generic;
 
 namespace ODataAnnotations
 {
@@ -19,9 +20,27 @@ namespace ODataAnnotations
                 foreach (var annotation in annotatable.Annotations)
                 {
                     int atIndex = annotation.Key.IndexOf('@');
+                    ICollection<ODataInstanceAnnotation> instanceAnnotations = null;
+
                     if (atIndex <= 0)
                     {
-                        resource.InstanceAnnotations.Add(
+                        instanceAnnotations = resource.InstanceAnnotations;
+                    }
+                    else
+                    {
+                        string propertyName = annotation.Key.Substring(0, atIndex);
+                        foreach (var property in resource.Properties)
+                        {
+                            if (property.Name == propertyName)
+                            {
+                                instanceAnnotations = property.InstanceAnnotations;
+                            }
+                        }
+                    }
+
+                    if (instanceAnnotations != null)
+                    {
+                        instanceAnnotations.Add(
                             new ODataInstanceAnnotation(
                                 annotation.Key.Substring(atIndex + 1),
                                 new ODataPrimitiveValue(annotation.Value)));
@@ -30,33 +49,6 @@ namespace ODataAnnotations
             }
 
             return resource;
-        }
-
-        public override void AppendDynamicProperties(ODataResource resource, SelectExpandNode selectExpandNode, ResourceContext resourceContext)
-        {
-            base.AppendDynamicProperties(resource, selectExpandNode, resourceContext);
-
-            if (resourceContext.ResourceInstance is IAnnotatable annotatable)
-            {
-                foreach (var annotation in annotatable.Annotations)
-                {
-                    int atIndex = annotation.Key.IndexOf('@');
-                    if (atIndex > 0)
-                    {
-                        string propertyName = annotation.Key.Substring(0, atIndex);
-                        foreach (var property in resource.Properties)
-                        {
-                            if (property.Name == propertyName)
-                            {
-                                property.InstanceAnnotations.Add(
-                                    new ODataInstanceAnnotation(
-                                        annotation.Key.Substring(atIndex + 1),
-                                        new ODataPrimitiveValue(annotation.Value)));
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
 }
